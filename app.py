@@ -60,7 +60,9 @@ def buscar_lorcana(card_number, set_number):
 
 # --- CAPTURA DA CÂMERA ---
 
-foto_upload = st.camera_input("Aponte para o rodapé esquerdo da carta")
+# Abre a câmera nativa do celular com qualidade máxima ao clicar
+foto_upload = st.file_input("Tire uma foto bem de perto do rodapé esquerdo", type=["jpg", "jpeg", "png"])
+
 
 if foto_upload is not None:
     bytes_data = foto_upload.getvalue()
