@@ -21,8 +21,6 @@ def carrega_ocr():
 
 reader = carrega_ocr()
 
-# --- FUNÇÕES DE BUSCA NAS APIS ---
-
 def buscar_magic(set_code, number):
     url = f"https://api.scryfall.com/cards/{set_code.lower()}/{number}"
     res = requests.get(url)
@@ -42,15 +40,10 @@ def buscar_pokemon(set_code, number):
     return None
 
 def buscar_lorcana(card_number, set_number):
-    # Consulta a API pública de Lorcana filtrando pelo número da carta e do set
     url = f"https://api.lorcana-api.com/cards/fetch?id={set_number}-{card_number}"
-    # Nota: Caso a API exija formato diferente, usamos busca por texto ou número estruturado
-    url_alt = f"https://api.lorcana-api.com/cards/all" # Backup para filtragem local se necessário
-    
     res = requests.get(url)
     if res.status_code == 200:
         data = res.json()
-        # Se retornar uma lista ou objeto válido
         if isinstance(data, list) and len(data) > 0:
             card = data[0]
             return {"Jogo": "Lorcana", "Nome": card.get("Name"), "Edição/Set": f"Set {set_number}", "Número": card_number, "Raridade": card.get("Rarity", "UNKNOWN").upper()}
@@ -58,11 +51,7 @@ def buscar_lorcana(card_number, set_number):
             return {"Jogo": "Lorcana", "Nome": data.get("Name"), "Edição/Set": f"Set {set_number}", "Número": card_number, "Raridade": data.get("Rarity", "UNKNOWN").upper()}
     return None
 
-# --- CAPTURA DA CÂMERA ---
-
-# Abre a câmera nativa do celular com qualidade máxima ao clicar
-foto_upload = st.file_input("Tire uma foto bem de perto do rodapé esquerdo", type=["jpg", "jpeg", "png"])
-
+foto_upload = st.file_uploader("Tire uma foto bem de perto do rodapé esquerdo", type=["jpg", "jpeg", "png"])
 
 if foto_upload is not None:
     bytes_data = foto_upload.getvalue()
@@ -75,10 +64,7 @@ if foto_upload is not None:
         result = reader.readtext(recorte, detail=0)
         texto = " ".join(result).upper()
         
-        # 1. TESTA PADRÃO LORCANA (Ex: 102/204 EN 4 ou 102/204 EN·4)
         padrao_lorcana = re.search(r'([0-9]{1,3})\s*/\s*[0-9]{3}.*EN.*?([0-9]{1,2})', texto)
-        
-        # 2. TESTA PADRÃO TRADICIONAL (Magic/Pokémon - Ex: MH3 052)
         padrao_geral = re.search(r'([A-Z0-9]{3,4})\s+([0-9]{3,4})', texto)
         
         carta = None
@@ -90,12 +76,10 @@ if foto_upload is not None:
             
         elif padrao_geral:
             set_code, num_card = padrao_geral.group(1), padrao_geral.group(2)
-            # Tenta Magic, se não der, tenta Pokémon
             carta = buscar_magic(set_code, num_card)
             if not carta:
                 carta = buscar_pokemon(set_code, num_card)
         
-        # --- RESULTADO ---
         if carta:
             if not any(c['Nome'] == carta['Nome'] and c['Número'] == carta['Número'] for c in st.session_state.estoque):
                 st.session_state.estoque.append(carta)
@@ -103,7 +87,6 @@ if foto_upload is not None:
         else:
             st.error(f"Não consegui identificar na API. Texto lido no rodapé: '{texto}'. Tente focar melhor.")
 
-# --- EXIBIÇÃO E EXPORTAÇÃO ---
 if st.session_state.estoque:
     st.subheader("📋 Lote de Boosters Aberto (Trindade TCG)")
     df = pd.DataFrame(st.session_state.estoque)
@@ -116,3 +99,4 @@ if st.session_state.estoque:
         file_name=f"lote_barao_trindade_{datetime.now().strftime('%d-%m-%Y')}.csv",
         mime="text/csv",
     )
+    
